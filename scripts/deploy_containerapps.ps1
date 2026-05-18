@@ -267,6 +267,11 @@ Set-ContainerApp `
         AZURE_STORAGE_CONTAINER = $storageContainer
     }
 
+$backendFqdn = Wait-ForContainerAppFqdn -Name $backendApp -ResourceGroup $rg -TimeoutMinutes 10
+if ([string]::IsNullOrWhiteSpace($backendFqdn)) {
+    throw 'Could not resolve backend FQDN after deployment.'
+}
+
 Set-ContainerApp `
     -Name $frontendApp `
     -ResourceGroup $rg `
@@ -278,9 +283,22 @@ Set-ContainerApp `
     -RegistryUsername $acrUser `
     -RegistryPassword $acrPass
 
-$backendFqdn = Wait-ForContainerAppFqdn -Name $backendApp -ResourceGroup $rg -TimeoutMinutes 10
+Set-ContainerApp `
+    -Name $frontendApp `
+    -ResourceGroup $rg `
+    -EnvironmentName $envName `
+    -Image "$acrLoginServer/azure-app-frontend:$imageTag" `
+    -TargetPort 80 `
+    -Ingress 'external' `
+    -RegistryServer $acrLoginServer `
+    -RegistryUsername $acrUser `
+    -RegistryPassword $acrPass `
+    -EnvironmentVariables @{
+        API_BASE_URL = "https://$backendFqdn"
+    }
+
 $frontendFqdn = Wait-ForContainerAppFqdn -Name $frontendApp -ResourceGroup $rg -TimeoutMinutes 10
-if ([string]::IsNullOrWhiteSpace($backendFqdn) -or [string]::IsNullOrWhiteSpace($frontendFqdn)) {
+if ([string]::IsNullOrWhiteSpace($frontendFqdn)) {
     throw 'Could not resolve backend or frontend FQDN after deployment.'
 }
 
