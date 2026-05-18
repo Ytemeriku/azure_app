@@ -134,6 +134,33 @@ function Get-ContainerAppFqdn {
     return (az containerapp show --name $Name --resource-group $ResourceGroup --query properties.configuration.ingress.fqdn -o tsv)
 }
 
+function Wait-ForContainerAppFqdn {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string]$ResourceGroup,
+        [int]$TimeoutMinutes = 10
+    )
+
+    $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
+    Write-Host "Waiting up to $TimeoutMinutes minutes for container app '$Name' FQDN..."
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $state = az containerapp show --name $Name --resource-group $ResourceGroup --query properties.provisioningState -o tsv 2>$null
+            $fqdn = az containerapp show --name $Name --resource-group $ResourceGroup --query properties.configuration.ingress.fqdn -o tsv 2>$null
+            if (-not [string]::IsNullOrWhiteSpace($fqdn) -and $fqdn -ne 'None') {
+                Write-Host "Container app '$Name' FQDN: $fqdn (state: $state)"
+                return $fqdn.Trim()
+            }
+            Write-Host "Status for '$Name': $state; FQDN not yet available, retrying..."
+        } catch {
+            Write-Host "Transient error checking container app '$Name' (will retry): $($_.Exception.Message)"
+        }
+        Start-Sleep -Seconds 15
+    }
+    Write-Host "Timed out waiting for FQDN of '$Name'"
+    return ''
+}
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
@@ -243,8 +270,8 @@ Set-ContainerApp `
     -RegistryUsername $acrUser `
     -RegistryPassword $acrPass
 
-$backendFqdn = Get-ContainerAppFqdn -Name $backendApp -ResourceGroup $rg
-$frontendFqdn = Get-ContainerAppFqdn -Name $frontendApp -ResourceGroup $rg
+$backendFqdn = Wait-ForContainerAppFqdn -Name $backendApp -ResourceGroup $rg -TimeoutMinutes 10
+$frontendFqdn = Wait-ForContainerAppFqdn -Name $frontendApp -ResourceGroup $rg -TimeoutMinutes 10
 if ([string]::IsNullOrWhiteSpace($backendFqdn) -or [string]::IsNullOrWhiteSpace($frontendFqdn)) {
     throw 'Could not resolve backend or frontend FQDN after deployment.'
 }
