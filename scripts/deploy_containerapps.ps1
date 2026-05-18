@@ -36,6 +36,35 @@ function Invoke-Az {
     }
 }
 
+function Ensure-ResourceProviderRegistered {
+    param(
+        [Parameter(Mandatory = $true)][string]$Namespace
+    )
+
+    $state = az provider show --namespace $Namespace --query registrationState -o tsv 2>$null
+    if ([string]::IsNullOrWhiteSpace($state)) {
+        $state = 'NotRegistered'
+    }
+
+    if ($state -eq 'Registered') {
+        return
+    }
+
+    Write-Host "Registering resource provider $Namespace"
+    Invoke-Az -Arguments @('provider', 'register', '--namespace', $Namespace) -FailureMessage "Failed to register resource provider $Namespace."
+
+    $deadline = (Get-Date).AddMinutes(10)
+    while ((Get-Date) -lt $deadline) {
+        Start-Sleep -Seconds 10
+        $state = az provider show --namespace $Namespace --query registrationState -o tsv 2>$null
+        if ($state -eq 'Registered') {
+            return
+        }
+    }
+
+    throw "Timed out waiting for resource provider $Namespace to register."
+}
+
 function Set-ContainerApp {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -153,6 +182,9 @@ foreach ($entry in $requiredValues.GetEnumerator()) {
 }
 
 az extension add --name containerapp --upgrade --yes | Out-Null
+
+Ensure-ResourceProviderRegistered -Namespace 'Microsoft.OperationalInsights'
+Ensure-ResourceProviderRegistered -Namespace 'Microsoft.App'
 
 $rgExists = $false
 $rgCurrentLocation = $location
