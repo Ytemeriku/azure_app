@@ -271,10 +271,39 @@
                     html += '<ul style="text-align: left;">';
                     data.blobs.forEach(blob => {
                         html += `<li><strong>${blob.name}</strong> (${blob.size} bytes, ${blob.last_modified})</li>`;
+                        html += `<div style="margin: 6px 0 12px 0;">`;
+                        html += `<button onclick="downloadBlob('${blob.name.replace(/'/g, "\\'")}')">Pobierz</button>`;
+                        html += `<button onclick="deleteBlob('${blob.name.replace(/'/g, "\\'")}')" style="background-color: #d83b01;">Usuń</button>`;
+                        html += `</div>`;
                     });
                     html += '</ul>';
                 }
                 showResponse(html);
+            } catch (error) {
+                showResponse(`Błąd: ${error.message}`, true);
+            }
+        }
+
+        function downloadBlob(blobName) {
+            window.open(apiUrl(`/api/blob/download/${encodeURIComponent(blobName)}`), '_blank');
+        }
+
+        async function deleteBlob(blobName) {
+            const confirmed = confirm(`Czy na pewno usunąć plik ${blobName}?`);
+            if (!confirmed) return;
+
+            try {
+                const response = await fetch(apiUrl(`/api/blob/${encodeURIComponent(blobName)}`), {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showResponse(`Usunięto plik: ${blobName}`);
+                    listBlobs();
+                } else {
+                    showResponse(`Błąd: ${data.error}`, true);
+                }
             } catch (error) {
                 showResponse(`Błąd: ${error.message}`, true);
             }
