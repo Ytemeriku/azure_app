@@ -112,10 +112,18 @@ function Set-ContainerApp {
         'containerapp', 'update',
         '--name', $Name,
         '--resource-group', $ResourceGroup,
-        '--image', $Image,
-        '--ingress', $Ingress,
-        '--target-port', $TargetPort
+        '--image', $Image
     )
+
+    # Some az containerapp update versions don't accept --ingress/--target-port flags.
+    # Use --set to modify configuration.ingress when needed.
+    if ($Ingress) {
+        $ingressExternal = ($Ingress -eq 'external') -as [bool]
+        $ingressExternalStr = if ($ingressExternal) { 'true' } else { 'false' }
+        $updateArgs += '--set'
+        $updateArgs += "configuration.ingress.external=$ingressExternalStr"
+        $updateArgs += "configuration.ingress.targetPort=$TargetPort"
+    }
 
     if ($envArgs.Count -gt 0) {
         $updateArgs += '--set-env-vars'
