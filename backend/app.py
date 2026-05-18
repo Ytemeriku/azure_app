@@ -276,37 +276,38 @@ def list_blobs():
     except Exception as e:
         return jsonify({'error': str(e), 'status': 'error'}), 500
 
-        @app.route('/api/blob/download/<path:blob_name>', methods=['GET'])
-        def download_blob(blob_name):
-            try:
-                blob_service_client = BlobServiceClient.from_connection_string(os.getenv('AZURE_STORAGE_CONNECTION_STRING'))
-                container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'uploads')
-                blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+@app.route('/api/blob/download/<path:blob_name>', methods=['GET'])
+def download_blob(blob_name):
+    try:
+        blob_service_client = BlobServiceClient.from_connection_string(os.getenv('AZURE_STORAGE_CONNECTION_STRING'))
+        container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'uploads')
+        blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
 
-                download_stream = blob_client.download_blob()
-                content = download_stream.readall()
-                props = blob_client.get_blob_properties()
+        download_stream = blob_client.download_blob()
+        content = download_stream.readall()
+        props = blob_client.get_blob_properties()
 
-                return send_file(
-                    BytesIO(content),
-                    as_attachment=True,
-                    download_name=blob_name,
-                    mimetype=props.content_settings.content_type or 'application/octet-stream'
-                )
-            except Exception as e:
-                return jsonify({'error': str(e), 'status': 'error'}), 500
+        return send_file(
+            BytesIO(content),
+            as_attachment=True,
+            download_name=blob_name,
+            mimetype=props.content_settings.content_type or 'application/octet-stream'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e), 'status': 'error'}), 500
 
-        @app.route('/api/blob/<path:blob_name>', methods=['DELETE'])
-        def delete_blob(blob_name):
-            try:
-                blob_service_client = BlobServiceClient.from_connection_string(os.getenv('AZURE_STORAGE_CONNECTION_STRING'))
-                container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'uploads')
-                blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
 
-                blob_client.delete_blob()
-                return jsonify({'status': 'success', 'message': f'Blob {blob_name} deleted'})
-            except Exception as e:
-                return jsonify({'error': str(e), 'status': 'error'}), 500
+@app.route('/api/blob/<path:blob_name>', methods=['DELETE'])
+def delete_blob(blob_name):
+    try:
+        blob_service_client = BlobServiceClient.from_connection_string(os.getenv('AZURE_STORAGE_CONNECTION_STRING'))
+        container_name = os.getenv('AZURE_STORAGE_CONTAINER', 'uploads')
+        blob_client = blob_service_client.get_blob_client(container=container_name, blob=blob_name)
+
+        blob_client.delete_blob()
+        return jsonify({'status': 'success', 'message': f'Blob {blob_name} deleted'})
+    except Exception as e:
+        return jsonify({'error': str(e), 'status': 'error'}), 500
 
 if __name__ == '__main__':
     debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
