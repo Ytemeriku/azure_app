@@ -154,9 +154,21 @@ foreach ($entry in $requiredValues.GetEnumerator()) {
 
 az extension add --name containerapp --upgrade --yes | Out-Null
 
-Write-Host "Deploying Container Apps to resource group $rg in $location"
+$rgExists = $false
+$rgCurrentLocation = $location
+$rgQuery = az group show --name $rg --query location -o tsv 2>$null
+if (-not [string]::IsNullOrWhiteSpace($rgQuery)) {
+    $rgExists = $true
+    $rgCurrentLocation = $rgQuery.Trim()
+}
 
-Invoke-Az -Arguments @('group', 'create', '--name', $rg, '--location', $location) -FailureMessage 'Failed to create resource group.'
+if ($rgExists) {
+    $location = $rgCurrentLocation
+    Write-Host "Using existing resource group $rg in $location"
+} else {
+    Write-Host "Deploying Container Apps to resource group $rg in $location"
+    Invoke-Az -Arguments @('group', 'create', '--name', $rg, '--location', $location) -FailureMessage 'Failed to create resource group.'
+}
 
 $workspaceId = az monitor log-analytics workspace show -g $rg -n $lawName --query customerId -o tsv 2>$null
 $workspaceKey = az monitor log-analytics workspace get-shared-keys -g $rg -n $lawName --query primarySharedKey -o tsv 2>$null
