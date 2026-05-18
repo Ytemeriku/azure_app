@@ -1,0 +1,35 @@
+# Container App template for backend
+# Replace placeholders before deploying or use scripts/deploy_containerapps.ps1
+name: <BACKEND_APP_NAME>
+type: Microsoft.App/containerApps
+location: <AZURE_LOCATION>
+properties:
+  managedEnvironmentId: <MANAGED_ENVIRONMENT_ID>
+  configuration:
+    ingress:
+      external: true
+      targetPort: 5000
+    registries:
+      - server: <ACR_LOGIN_SERVER>
+        username: <ACR_USERNAME>
+        passwordSecretRef: acr-password
+    secrets:
+      - name: acr-password
+        value: <ACR_PASSWORD>
+      - name: database-url
+        value: <DATABASE_URL>
+      - name: storage-connection-string
+        value: <AZURE_STORAGE_CONNECTION_STRING>
+  template:
+    containers:
+      - name: backend
+        image: <ACR_LOGIN_SERVER>/azure-app-backend:<IMAGE_TAG>
+        env:
+          - name: PORT
+            value: "5000"
+          - name: DATABASE_URL
+            secretRef: database-url
+          - name: AZURE_STORAGE_CONNECTION_STRING
+            secretRef: storage-connection-string
+          - name: AZURE_STORAGE_CONTAINER
+            value: <AZURE_STORAGE_CONTAINER>

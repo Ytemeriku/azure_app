@@ -1,0 +1,27 @@
+# Container App template for nginx reverse proxy
+# Replace placeholders before deploying or use scripts/deploy_containerapps.ps1
+name: <NGINX_APP_NAME>
+type: Microsoft.App/containerApps
+location: <AZURE_LOCATION>
+properties:
+  managedEnvironmentId: <MANAGED_ENVIRONMENT_ID>
+  configuration:
+    ingress:
+      external: true
+      targetPort: 80
+    registries:
+      - server: <ACR_LOGIN_SERVER>
+        username: <ACR_USERNAME>
+        passwordSecretRef: acr-password
+    secrets:
+      - name: acr-password
+        value: <ACR_PASSWORD>
+  template:
+    containers:
+      - name: nginx
+        image: <ACR_LOGIN_SERVER>/azure-app-nginx:<IMAGE_TAG>
+        env:
+          - name: BACKEND_URL
+            value: "https://<BACKEND_APP_FQDN>/"
+          - name: FRONTEND_URL
+            value: "https://<FRONTEND_APP_FQDN>/"

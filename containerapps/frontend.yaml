@@ -1,0 +1,23 @@
+# Container App template for frontend
+# Replace placeholders before deploying or use scripts/deploy_containerapps.ps1
+name: <FRONTEND_APP_NAME>
+type: Microsoft.App/containerApps
+location: <AZURE_LOCATION>
+properties:
+  managedEnvironmentId: <MANAGED_ENVIRONMENT_ID>
+  configuration:
+    ingress:
+      external: true
+      targetPort: 80
+    registries:
+      - server: <ACR_LOGIN_SERVER>
+        username: <ACR_USERNAME>
+        passwordSecretRef: acr-password
+    secrets:
+      - name: acr-password
+        value: <ACR_PASSWORD>
+  template:
+    containers:
+      - name: frontend
+        image: <ACR_LOGIN_SERVER>/azure-app-frontend:<IMAGE_TAG>
+        env: []
